@@ -88,6 +88,7 @@ function dv1(year, the_subject, sort) {
 	d3.tsv("assets/data/voci_" + year + ".tsv").then(loaded);
 
 	function loaded(data) {
+		console.log("dara", data);
 		// load data
 		let total = 0;
 		let subject_articles = [];
@@ -126,6 +127,7 @@ function dv1(year, the_subject, sort) {
 		});
 
 		filtered_data.forEach(function (d, i) {
+			console.log("d", d);
 			total += 1;
 			d.article = d.article.replace(/_/g, " ");
 			d.size = +d.size;
@@ -140,6 +142,9 @@ function dv1(year, the_subject, sort) {
 			d.issues_prev = +d.issues_prev;
 			d.images_prev = +d.images_prev;
 			d.incipit_prev = +d.incipit_prev;
+			d.issue_sourceNeeded = +d.issue_sourceNeeded;
+			d.issues = +d.issues;
+			d.issue_clarify = +d.issue_clarify;
 
 			if (d.avg_pv_prev !== "-") {
 				d.avg_pv_prev = +d.avg_pv_prev;
@@ -166,7 +171,10 @@ function dv1(year, the_subject, sort) {
 					d.images,
 					d.images_prev,
 					d.incipit_size,
-					d.incipit_prev
+					d.incipit_prev,
+					d.issue_clarify,
+					d.issue_sourceNeeded,
+					d.issues
 				);
 			}
 		});
@@ -185,6 +193,7 @@ function dv1(year, the_subject, sort) {
 			return Math.sqrt(+d.size / 3.14);
 		});
 
+
 		let y = d3
 			.scaleLinear()
 			.domain([0, y_max + (y_max / 100) * 10])
@@ -198,6 +207,7 @@ function dv1(year, the_subject, sort) {
 				})
 			)
 			.range([0, width]);
+
 
 		if (sort == 1) {
 			max = total;
@@ -310,16 +320,98 @@ function dv1(year, the_subject, sort) {
 
 		//========== X axis ======
 
-		let xAxisGenerator = d3
-			.axisBottom(x_ScaleTime)
-			.tickFormat(d3.timeFormat("%Y-%m-%d"));
 
-		let xAxis = plot
-			.append("g")
-			.call(xAxisGenerator)
-			.attr("transform", `translate(${0},${height})`);
+		function updateXScale(selectedValue){
+			
+			// console.log("sv== " + selectedValue)
+	
+			d3.select("#datexAxis").remove();
+			d3.select("#xAxis").remove();
+				
+				
+				
+			if(selectedValue == 1){
+				var values = filtered_data.map(function(d){
+					return d.article;
+				})
+			}
+			else if(selectedValue == 2){
+				dateXAxis();
+			}
+			else if(selectedValue == 3){
+				var values = filtered_data.map(function(d){
+					return +d.size;
+				})
+			}
+			else if(selectedValue == 4){
+				var values = filtered_data.map(function(d){
+					return +d.discussion_size;
+				})
+			}
+			else if(selectedValue == 5){
+				var values = filtered_data.map(function(d){
+					return +d.incipit_size;
+				})
+			}
+			else if(selectedValue == 6){
+				var values = filtered_data.map(function(d){
+					return +d.issues;
+				})
+			}
+			else if(selectedValue == 7){
+				var values = filtered_data.map(function(d){
+					return +d.images;
+				})
+			}
+			else if(selectedValue == 8){
+				var values = filtered_data.map(function(d){
+					return +d.notes;
+				})
+			}
+	
+			// console.log("val == " +values)
+				var xSacle = d3.scaleLinear()
+					.domain([0 , d3.max(values)])
+					.range([0, width +50])
+	
+			var xAxisGenerator = d3.axisBottom(xSacle);
+	
+			let xAxis = plot.append("a")
+				   .attr("id" , "xAxis")
+				   .call(xAxisGenerator)
+					.attr("transform",`translate(${0},${height})`)
+				
+		}
+			
+		function dateXAxis(){
 
-		//========  X axis =======
+			let x_ScaleTime = d3.scaleTime()
+				.domain(d3.extent(filtered_data, function(d) { 
+					return new Date(d.first_edit); 
+				  }))
+				.range([0, width+50])
+						
+			var xAxisGenerator = d3.axisBottom(x_ScaleTime);
+	
+			let xAxis = plot.append("a")
+				   .attr("id" , "datexAxis")
+				   .call(xAxisGenerator)
+				   .attr("transform",`translate(${0},${height})`)		 
+		}
+
+		var initialSelectedColumn = "1";
+		updateXScale(initialSelectedColumn); 
+
+		
+		d3.select("#sort").on("change", function() {
+			var  selectedValue = d3.select(this).property("value");
+			updateXScale(selectedValue);
+		});
+	
+		 
+ 
+		 //========  X axis =======	
+
 
 		// let the_sort;
 		let tooltip = d3
@@ -337,13 +429,12 @@ function dv1(year, the_subject, sort) {
 					"</p><table>";
 
 				content +=
-					"<tr><td class='label'>publication</td><td class='value'>" +
+					"<tr><td class='label'>publicación</td><td class='value'>" +
 					format_date(d.first_edit) +
 					"</td><td></td></tr>";
-
 				// avg daily visits
 				content +=
-					"<tr><td class='label'>daily visits</td><td class='value'>" +
+					"<tr><td class='label'>visitas diarias</td><td class='value'>" +
 					d.avg_pv.toLocaleString();
 				if (d.avg_pv_prev !== "-") {
 					let diff_pv = d.avg_pv - d.avg_pv_prev;
@@ -373,7 +464,7 @@ function dv1(year, the_subject, sort) {
 
 				//size
 				content +=
-					"<tr><td class='label'>size</td><td class='value'>" +
+					"<tr><td class='label'>tamaño</td><td class='value'>" +
 					d.size.toLocaleString();
 				if (year != starting_year) {
 					let diff_size = d.size - d.size_prev;
@@ -400,7 +491,7 @@ function dv1(year, the_subject, sort) {
 
 				// discussion
 				content +=
-					"<tr><td class='label'>discussion</td><td class='value'>" +
+					"<tr><td class='label'>discusión</td><td class='value'>" +
 					d.discussion_size.toLocaleString();
 				if (year != starting_year) {
 					let diff_discussion = d.discussion_size - d.discussion_prev;
@@ -427,7 +518,7 @@ function dv1(year, the_subject, sort) {
 
 				// incipit
 				content +=
-					"<tr><td class='label'>introduction</td><td class='value'>" +
+					"<tr><td class='label'>introducción</td><td class='value'>" +
 					d.incipit_size.toLocaleString();
 				if (year != starting_year) {
 					let diff_incipit = d.incipit_size - d.incipit_prev;
@@ -454,7 +545,7 @@ function dv1(year, the_subject, sort) {
 
 				// referencias
 				content +=
-					"<tr><td class='label'>references</td><td class='value'>" +
+					"<tr><td class='label'>referencias</td><td class='value'>" +
 					d.notes.toLocaleString();
 				if (year != starting_year) {
 					let diff_notes = d.notes - d.notes_prev;
@@ -479,9 +570,48 @@ function dv1(year, the_subject, sort) {
 					}
 				}
 
+				// issues
+				content +=
+					"<tr><td class='label'>asuntos</td><td class='value'>" +
+					d.issues.toLocaleString();
+				if (year != starting_year) {
+					let diff_issues = d.issues - d.issues_prev;
+					if (diff_issues > 0) {
+						content +=
+							"<td class='value decrease'>(" +
+							/* d.issues_prev + " " + */ variation_perc(
+								d.issues,
+								d.issues_prev,
+								"issues"
+							) +
+							")</td></tr>";
+					} else {
+						content +=
+							"<td class='value increase'>(" +
+							/* d.issues_prev + " " + */ variation_perc(
+								d.issues,
+								d.issues_prev,
+								"issues"
+							) +
+							")</td></tr>";
+					}
+				}
+
+				// source needed
+				content +=
+					"<tr><td class='label'>cita requerida</td><td class='value'>" +
+					d.issue_sourceNeeded;
+				+"</td><td></td></tr>";
+
+				// need clarification
+				content +=
+					"<tr><td class='label'>aclaración necesaria</td><td class='value'>" +
+					d.issue_clarify;
+				+"</td><td></td></tr>";
+
 				// images
 				content +=
-					"<tr><td class='label'>images</td><td class='value'>" +
+					"<tr><td class='label'>imágenes</td><td class='value'>" +
 					d.images.toLocaleString();
 				if (year != starting_year) {
 					let diff_images = d.images - d.images_prev;
@@ -693,6 +823,8 @@ function dv1(year, the_subject, sort) {
 				return r(Math.sqrt(d.discussion_size / 3.14));
 			});
 
+			
+
 		// improvements
 		let improvements_box = article_circles
 			.append("g")
@@ -796,6 +928,17 @@ function dv1(year, the_subject, sort) {
 		function update_subject(the_subject, the_sort) {
 			d3.select("#articles").remove();
 
+			d3.select("#datexAxis").remove();
+			d3.select("#xAxis").remove();
+
+			if(the_sort == 2){
+				dateXAxis();
+			}
+			else{
+				d3.select("#datexAxis").remove();
+				updateXScale(the_sort);
+			}
+
 			d3.selectAll("circle").transition().duration(300).attr("r", 0);
 
 			// load data
@@ -840,7 +983,7 @@ function dv1(year, the_subject, sort) {
 
 			filtered_data = filter_data.sort(function (a, b) {
 				return d3.ascending(a.article, b.article);
-			});
+     });
 
 			filtered_data.forEach(function (d, i) {
 				total += 1;
@@ -850,7 +993,9 @@ function dv1(year, the_subject, sort) {
 				d.incipit_size = +d.incipit_size;
 				d.issues = +d.issues;
 				d.images = +d.images;
-
+				d.issue_clarify = +d.issue_clarify;
+				d.issue_sourceNeeded = +d.issue_sourceNeeded;
+        d.notes = +d.notes
 				d.days = +d.days;
 				d.avg_pv = +d.avg_pv;
 
@@ -860,7 +1005,7 @@ function dv1(year, the_subject, sort) {
 
 				if (d.avg_pv_prev !== "-") {
 					d.avg_pv_prev = +d.avg_pv_prev;
-				}
+        }
 
 				// improvements
 				d.improvements = 0;
@@ -940,6 +1085,14 @@ function dv1(year, the_subject, sort) {
 				});
 				max = d3.max(filtered_data, function (d) {
 					return d.images;
+				});
+			}
+			else if (the_sort == 8) {
+				min = d3.min(filtered_data, function (d) {
+					return d.notes;
+				});
+				max = d3.max(filtered_data, function (d) {
+					return d.notes;
 				});
 			}
 
@@ -1029,6 +1182,11 @@ function dv1(year, the_subject, sort) {
 							"translate(" + (x(+d.images) + 50) + "," + 0 + ")"
 						);
 					}
+					else if (the_sort == 8){ // "refrences"
+						return "translate(" + (x(+d.notes)+50) + "," + 0 + ")"
+					}
+					
+					
 				})
 				.on("mouseover", tooltip.show)
 				.on("mouseout", tooltip.hide);
@@ -1225,7 +1383,9 @@ function dv1(year, the_subject, sort) {
 			//           })
 		}
 
+
 		function update_sort(the_subject, the_sort) {
+
 			//load data
 			total = 0;
 
@@ -1268,17 +1428,20 @@ function dv1(year, the_subject, sort) {
 				d.article = d.article.replace(/_/g, " ");
 				d.size = +d.size;
 				d.images = +d.images;
-
+				d.issue_clarify = +d.issue_clarify;
+				d.issue_sourceNeeded = +d.issue_sourceNeeded;
 				d.days = +d.days;
 				d.avg_pv = +d.avg_pv;
 				d.avg_pv_prev = +d.avg_pv_prev;
 				d.issues = +d.issues;
+        d.notes = +d.notes
 				// console.log(d.article,d.issues)
 			});
 
 			let max;
 			let min;
 			let sort = [
+
 				"article", // 1
 				"publication", // 2
 				"size", // 3
@@ -1286,7 +1449,9 @@ function dv1(year, the_subject, sort) {
 				"incipit", // 5
 				"issue", // 6
 				"images", // 7
+                                "references"	//8
 			];
+
 
 			if (the_sort == 1) {
 				max = total;
